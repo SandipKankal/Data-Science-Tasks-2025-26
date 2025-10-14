@@ -1,0 +1,70 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+
+# Optional: Install TensorFlow in Colab if not installed
+# !pip install tensorflow
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+# Load dataset (update the path to your uploaded dataset)
+df = pd.read_csv('/content/cirrhosis.csv')
+
+# Preprocessing
+df = df.dropna()
+for col in df.select_dtypes(include=['object']).columns:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+
+# Define features and target
+X = df.drop('Status', axis=1)
+y = df['Status']
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Scale features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+
+# k-Nearest Neighbors Model
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+knn_pred = knn.predict(X_test)
+
+print("KNN Accuracy:", accuracy_score(y_test, knn_pred))
+print("KNN Classification Report:\n", classification_report(y_test, knn_pred))
+
+cm_knn = confusion_matrix(y_test, knn_pred)
+disp_knn = ConfusionMatrixDisplay(confusion_matrix=cm_knn)
+disp_knn.plot(cmap=plt.cm.Blues)
+plt.title("Confusion Matrix - KNN")
+plt.show()
+
+# Neural Network Model
+model = Sequential([
+    Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(32, activation='relu'),
+    Dense(1, activation='sigmoid')])
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=1)
+
+nn_pred_prob = model.predict(X_test)
+nn_pred = (nn_pred_prob > 0.5).astype(int).flatten()
+
+print("Neural Network Accuracy:", accuracy_score(y_test, nn_pred))
+print("Neural Network Classification Report:\n", classification_report(y_test, nn_pred))
+
+cm_nn = confusion_matrix(y_test, nn_pred)
+disp_nn = ConfusionMatrixDisplay(confusion_matrix=cm_nn)
+disp_nn.plot(cmap=plt.cm.Blues)
+plt.title("Confusion Matrix - Neural Network")
+plt.show()
